@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.orbit-ring {
+  transform: rotateX(0deg);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  animation: fadeIn 1s ease-out forwards;
+}
+
+.central-star {
+  background: radial-gradient(circle at center, #fef08a, #fde047);
+  box-shadow: 
+    0 0 60px rgba(254, 240, 138, 0.4),
+    0 0 100px rgba(254, 240, 138, 0.2);
+  transform: translateZ(30px);
+  opacity: 0;
+  animation: fadeInScale 1s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateZ(30px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateZ(30px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(var(--orbit-radius)) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(var(--orbit-radius)) rotate(-360deg);
+  }
+}
+
+.animate-orbit {
+  animation: orbit 20s linear infinite, fadeIn 0.5s ease-out forwards;
+  animation-delay: var(--orbit-delay), 0s;
+}
+
+.animate-orbit:hover {
+  animation-play-state: paused !important;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+* {
+  box-sizing: border-box;
+}
