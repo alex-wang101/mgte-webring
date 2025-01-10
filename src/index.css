@@ -1,40 +1,194 @@
+/* index.css */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* -- CORE 3D UTILS -- */
 .perspective-1000 {
-  perspective: 1000px;
+  perspective: 1000px; /* gives real 3D depth */
 }
-
 .preserve-3d {
   transform-style: preserve-3d;
 }
 
+/* Just to avoid everything getting messed up */
+* {
+  box-sizing: border-box;
+}
+
+/* -- KEYFRAMES -- */
+
+/*
+  1) Tilt the ring from rotateX(75deg) -> rotateX(0deg) on load
+*/
+@keyframes ringTilt {
+  0% {
+    transform: rotateX(75deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+/*
+  2) Orbit the planets around the star in a 3D circle (Z-axis in local space).
+     Because the ring itself is tilted at first, from the camera’s perspective
+     the orbit will look elliptical and planets will appear closer/farther in 3D.
+*/
+@keyframes orbit {
+  0% {
+    /* revolve around local Z-axis from 0deg */
+    transform: rotateZ(0deg);
+  }
+  100% {
+    /* one full revolution around local Z-axis */
+    transform: rotateZ(360deg);
+  }
+}
+
+/* 
+  Fade in, scale up the star from 75 -> 0 deg if you wish.
+  (You already had something similar, adapt as needed.)
+*/
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotateX(75deg) translateZ(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateX(0deg) translateZ(30px);
+  }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* -- RING & STAR -- */
 .orbit-ring {
+  /* Initially tilted 75deg; 
+     We'll animate it to 0deg via the ringTilt keyframe 
+  */
   transform: rotateX(75deg);
+  animation: ringTilt 2s ease-out forwards, fadeIn 1s ease-out forwards;
+  animation-fill-mode: forwards;
+  opacity: 0;
+  transform-style: preserve-3d;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-  opacity: 0;
-  animation: fadeIn 1s ease-out forwards, perspectiveShift 2s ease-out forwards;
-  animation-fill-mode: forwards;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
+/*
+  Optional ring “visual” size. Adjust to your liking.
+  If your ring in React is sized differently, remove/adjust.
+*/
+.orbit-ring {
+  width: 300px;  
+  height: 300px; 
+  border-radius: 50%;
+  position: absolute;
+  /* top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotateX(75deg); */
+} 
+
+/* 
+  A child "revolver" that actually rotates the planets around the star.
+  Since the ring is itself rotating from 75 to 0, it looks elliptical from the user perspective.
+*/
+.orbit-revolver {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  animation: orbit 20s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* 
+  The central star is also initially at rotateX(75deg), 
+  then it animates to 0deg (face forward) 
+*/
 .central-star {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  /* position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotateX(75deg) translateZ(30px); */
+  animation: fadeInScale 2s ease-out forwards;
   background: radial-gradient(circle at 30% 30%, #fef08a, #fde047 60%, #ca8a04);
-  box-shadow: 
-    0 0 60px rgba(254, 240, 138, 0.4),
-    0 0 100px rgba(254, 240, 138, 0.2);
-  transform: translateZ(30px) rotateX(75deg);
+  box-shadow: 0 0 60px rgba(254, 240, 138, 0.4), 
+              0 0 100px rgba(254, 240, 138, 0.2);
+  transform-style: preserve-3d;
+} 
+
+/* 
+  If you want a glowing pulse:
+*/
+.central-star::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: pulse-glow 3s ease-in-out infinite;
+  background: radial-gradient(circle at 30% 30%, rgba(254, 240, 138, 0.4), transparent 60%);
+}
+
+/* -- PLANETS (the actual orbiting links) -- */
+
+/*
+   Each planet is absolutely positioned in the orbit “revolver”,
+   and then use translateX(...) so that it’s offset from center.
+   That revolve container rotates them around Z in 3D.
+
+   If you want them to remain face-forward, do rotateZ(-angle) 
+   to neutralize the revolve’s rotation. 
+   We do that trick below in the final transform.
+*/
+.planet {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 48px; /* adjust as needed */
+  height: 48px;
+  border-radius: 50%;
+  transform-style: preserve-3d;
+  overflow: hidden;
+  transform-origin: center;
+}
+
+/* 
+   This is where the planet is placed on the ring radius, 
+   plus a self-rotateZ(...) to remain upright. 
+   (We define final transform inline via style or with custom properties.)
+*/
+.planet-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1); /* placeholder */
+}
+
+/* If you want a fade in for each planet: */
+.planet {
   opacity: 0;
-  animation: fadeInScale 1s ease-out forwards, starPerspectiveShift 2s ease-out forwards;
+  animation: fadeIn 1s ease-out forwards;
+  animation-delay: var(--orbit-delay, 0s);
   animation-fill-mode: forwards;
 }
 
+/* Example "sphere-effect" from your code */
 .sphere-effect {
   position: relative;
   overflow: hidden;
   transform-style: preserve-3d;
 }
-
 .sphere-effect::before {
   content: '';
   position: absolute;
@@ -45,111 +199,10 @@
   background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 50%);
   pointer-events: none;
 }
-
 .sphere-effect::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    transparent 100%
-  );
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
   pointer-events: none;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.8) translateZ(30px) rotateX(75deg);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateZ(30px) rotateX(0deg);
-  }
-}
-
-@keyframes perspectiveShift {
-  0% {
-    transform: rotateX(75deg) rotateZ(0deg);
-  }
-  100% {
-    transform: rotateX(0deg) rotateZ(0deg);
-  }
-}
-
-@keyframes starPerspectiveShift {
-  0% {
-    transform: translateZ(30px) rotateX(75deg);
-  }
-  100% {
-    transform: translateZ(30px) rotateX(0deg);
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
-@keyframes orbit {
-  0% {
-    transform: rotate(0deg) translateX(var(--orbit-radius)) rotateX(75deg) rotate(0deg);
-  }
-  10% {
-    transform: rotate(36deg) translateX(var(--orbit-radius)) rotateX(67.5deg) rotate(-36deg);
-  }
-  20% {
-    transform: rotate(72deg) translateX(var(--orbit-radius)) rotateX(60deg) rotate(-72deg);
-  }
-  30% {
-    transform: rotate(108deg) translateX(var(--orbit-radius)) rotateX(45deg) rotate(-108deg);
-  }
-  40% {
-    transform: rotate(144deg) translateX(var(--orbit-radius)) rotateX(30deg) rotate(-144deg);
-  }
-  50% {
-    transform: rotate(180deg) translateX(var(--orbit-radius)) rotateX(15deg) rotate(-180deg);
-  }
-  60% {
-    transform: rotate(216deg) translateX(var(--orbit-radius)) rotateX(0deg) rotate(-216deg);
-  }
-  100% {
-    transform: rotate(360deg) translateX(var(--orbit-radius)) rotateX(0deg) rotate(-360deg);
-  }
-}
-
-.animate-orbit {
-  animation: orbit 20s linear infinite;
-  animation-delay: var(--orbit-delay);
-  transform-style: preserve-3d;
-  opacity: 0;
-  animation: orbit 20s linear infinite, fadeIn 0.5s ease-out forwards;
-  animation-delay: var(--orbit-delay), 0s;
-  animation-fill-mode: forwards;
-}
-
-.animate-orbit:hover {
-  animation-play-state: paused !important;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-* {
-  box-sizing: border-box;
 }

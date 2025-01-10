@@ -2,45 +2,50 @@ import React, { useState } from 'react';
 import { Star, Search, Users } from 'lucide-react';
 import { members, Member } from './data/members';
 
+/* Use a single ring map, each ring wraps its planets */
+
 interface OrbitingLinkProps {
   member: Member;
   orbitRadius: number;
   animationDelay: string;
   color: string;
-  ringIndex: number;
   onHover: (member: Member | null) => void;
   isVisible: boolean;
 }
 
-const OrbitingLink: React.FC<OrbitingLinkProps> = ({ 
-  member, 
-  orbitRadius, 
-  animationDelay, 
+const OrbitingLink: React.FC<OrbitingLinkProps> = ({
+  member,
+  orbitRadius,
+  animationDelay,
   color,
-  ringIndex,
   onHover,
-  isVisible 
+  isVisible
 }) => (
   <a
     href={member.url}
-    className={`absolute rounded-full w-16 h-16 flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 animate-orbit hover:scale-110 transition-all duration-300 preserve-3d ${
-      isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-    }`}
+    className={`
+      planet
+      ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+      hover:scale-110 transition-transform duration-300
+    `}
     style={{
-      '--orbit-radius': `${orbitRadius}px`,
-      '--ring-index': ringIndex,
+      /* We position each planet at some angle and radius in the revolve. 
+         Optionally, you can “counter-rotate” so it faces upright. */
+      transform: `
+        rotateZ(0deg) 
+        translateX(${orbitRadius -24}px)
+        rotateZ(0deg)
+      `,
       '--orbit-delay': animationDelay,
       background: `radial-gradient(circle at 30% 30%, ${color}, rgba(0,0,0,0.8))`,
-      padding: '2px',
-      boxShadow: `0 0 20px ${color}66`,
-      animationPlayState: `var(--ring-${ringIndex}-pause, running)`
+      boxShadow: `0 0 20px ${color}66`
     } as React.CSSProperties}
     onMouseEnter={() => onHover(member)}
     onMouseLeave={() => onHover(null)}
   >
-    <div className="w-full h-full rounded-full overflow-hidden sphere-effect">
-      <img 
-        src={member.photo} 
+    <div className="planet-inner sphere-effect">
+      <img
+        src={member.photo}
         alt={member.name}
         className="w-full h-full object-cover"
       />
@@ -53,7 +58,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredRing, setHoveredRing] = useState<number | null>(null);
   
-  const filteredMembers = members.filter(member => {
+  /* Filter members by search. */
+  const filteredMembers = members.filter((member) => {
     const query = searchQuery.toLowerCase();
     return (
       member.name.toLowerCase().includes(query) ||
@@ -69,24 +75,15 @@ function App() {
     { radius: 240, capacity: Math.min(5, Math.max(0, totalMembers - 7)) }
   ];
 
-  const rings = ringsConfig.map((config, ringIndex) => {
-    const startIndex = ringIndex === 0 ? 0 : 
-      ringsConfig.slice(0, ringIndex).reduce((sum, r) => sum + r.capacity, 0);
-    
-    return filteredMembers.slice(startIndex, startIndex + config.capacity).map((member, i) => ({
-      member,
-      radius: config.radius,
-      delay: `${-(i * (20 / config.capacity))}s`,
-      color: `hsl(${(360 / members.length) * members.indexOf(member)}, 70%, 65%)`,
-      ringIndex
-    }));
-  }).flat();
-
+  /* Instead of flattening all rings into one array,
+     map each ring plus its orbiting members directly in the JSX. */
+  
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center overflow-hidden bg-cover bg-center perspective-1000"
       style={{
-        backgroundImage: 'url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&w=2048&q=80")',
+        backgroundImage:
+          'url("https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&w=2048&q=80")'
       }}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -111,30 +108,92 @@ function App() {
           <Search className="absolute left-3 top-2.5 w-5 h-5 text-white/50" />
         </div>
       </div>
-      
-      <div 
+
+      {/* Main 3D container of size 600x600 (you can alter) */}
+      <div
         className="relative w-[600px] h-[600px] flex items-center justify-center preserve-3d"
         style={{
           '--ring-0-pause': hoveredRing === 0 ? 'paused' : 'running',
           '--ring-1-pause': hoveredRing === 1 ? 'paused' : 'running',
-          '--ring-2-pause': hoveredRing === 2 ? 'paused' : 'running',
+          '--ring-2-pause': hoveredRing === 2 ? 'paused' : 'running'
         } as React.CSSProperties}
       >
-        {ringsConfig.map((config, i) => (
-          <div 
-            key={i}
-            className="absolute rounded-full border border-white/20 orbit-ring preserve-3d"
-            style={{ 
-              width: `${config.radius * 2}px`, 
-              height: `${config.radius * 2}px`,
-              animationDelay: `${i * 0.2}s`,
-              boxShadow: '0 0 30px rgba(255, 255, 255, 0.1)'
-            }}
-            onMouseEnter={() => setHoveredRing(i)}
-            onMouseLeave={() => setHoveredRing(null)}
-          />
-        ))}
-        
+        {/* 
+          Map each ring with a "ring container" that:
+            1) Starts at rotateX(75deg)
+            2) Animates to rotateX(0deg)
+            3) Contains an .orbit-revolver that spins the planets around Z
+            4) Houses OrbitingLink planets
+        */}
+        {ringsConfig.map((config, ringIndex) => {
+          // Which members go in this ring
+          const startIndex =
+            ringIndex === 0
+              ? 0
+              : ringsConfig
+                  .slice(0, ringIndex)
+                  .reduce((sum, r) => sum + r.capacity, 0);
+
+          const ringMembers = filteredMembers.slice(
+            startIndex,
+            startIndex + config.capacity
+          );
+
+          return (
+            <div
+              key={ringIndex}
+              className="orbit-ring absolute preserve-3d"
+              style={{
+                width: `${config.radius * 2}px`,
+                height: `${config.radius * 2}px`,
+                animationDelay: `${ringIndex * 0.2}s`,
+                boxShadow: '0 0 30px rgba(255, 255, 255, 0.1)',
+                /* Pause the ring's tilt animation if hovered, or keep it spinning if you do that. 
+                   Currently it's only tilting once from 75 -> 0, so no infinite spin. 
+                 */
+              }}
+              onMouseEnter={() => setHoveredRing(ringIndex)}
+              onMouseLeave={() => setHoveredRing(null)}
+            >
+              {/* 
+                orbit-revolver: spins around its center in local Z 
+                (the ring is initially tilted, so it looks elliptical from the camera's POV) 
+              */}
+              <div
+                className="orbit-revolver w-full h-full relative preserve-3d"
+                /* Usually you'd define the orbit animation in CSS:
+                   @keyframes orbit { from {transform: rotateZ(0deg);} to {transform: rotateZ(360deg);} }
+                */
+                style={{
+                  animation: `orbit 20s linear infinite`,
+                  animationPlayState: `var(--ring-${ringIndex}-pause, running)`
+                }}
+              >
+                {/* Map the ringMembers to planet links */}
+                {ringMembers.map((member, i) => {
+                  const color = `hsl(${
+                    (360 / members.length) * members.indexOf(member)
+                  }, 70%, 65%)`;
+                  const delay = `${-(i * (20 / config.capacity))}s`;
+
+                  return (
+                    <OrbitingLink
+                      key={member.name}
+                      member={member}
+                      orbitRadius={config.radius}
+                      animationDelay={delay}
+                      color={color}
+                      isVisible={filteredMembers.includes(member)}
+                      onHover={setHoveredMember}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Central Star */}
         <div className="relative z-10 w-32 h-32 rounded-full flex items-center justify-center transform hover:scale-105 transition-transform central-star sphere-effect preserve-3d">
           <div className="absolute w-full h-full rounded-full animate-pulse-glow" />
           <div className="absolute">
@@ -143,7 +202,9 @@ function App() {
           <div className="text-center z-10">
             {hoveredMember ? (
               <>
-                <div className="text-gray-900 font-bold text-lg">{hoveredMember.name}</div>
+                <div className="text-gray-900 font-bold text-lg">
+                  {hoveredMember.name}
+                </div>
                 <div className="text-gray-800 text-sm">{hoveredMember.year}</div>
               </>
             ) : (
@@ -154,19 +215,6 @@ function App() {
             )}
           </div>
         </div>
-
-        {rings.map((ring, index) => (
-          <OrbitingLink
-            key={index}
-            member={ring.member}
-            orbitRadius={ring.radius}
-            animationDelay={ring.delay}
-            color={ring.color}
-            ringIndex={ring.ringIndex}
-            onHover={setHoveredMember}
-            isVisible={filteredMembers.includes(ring.member)}
-          />
-        ))}
       </div>
     </div>
   );
